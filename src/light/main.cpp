@@ -29,22 +29,6 @@ char packetBuffer[255]; // buffer for incoming data
 
 //====================================================================================
 
-void setup()
-{
-  // Setting The Serial Port ----------------------------------------------
-  Serial.begin(115200);
-
-  // WiFi Connect ----------------------------------------------------
-  Check_WiFi_and_Connect();
-}
-
-//====================================================================================
-
-void loop()
-{
-  Send_Data_To_Server();
-}
-
 //====================================================================================
 
 void Send_Data_To_Server()
@@ -54,7 +38,7 @@ void Send_Data_To_Server()
   tNow = millis();             // get the current runtime
   dtostrf(tNow, 8, 0, result); // translate it to a char array.
 
-  Udp.beginPacket(AP_GATEWAY_IP, BUTTON_UDP_LISTEN_PORT); // the IP Adress must be known
+  Udp.beginPacket(BUTTON_AP_GATEWAY_IP, BUTTON_UDP_LISTEN_PORT); // the IP Adress must be known
   // Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());         // this can be used, to answer to a peer, if data was received first
   Udp.write(result);
   Udp.endPacket(); // this will automatically send the data
@@ -97,7 +81,8 @@ void Check_WiFi_and_Connect()
   if (WiFi.status() != WL_CONNECTED)
   {
     WiFi.disconnect();          // probably not necessary due to WiFi.status() != WL_CONNECTED
-    WiFi.begin("DataTransfer"); // reconnect to the Network
+    WiFi.config(LIGHT_IP, BUTTON_AP_GATEWAY_IP, BUTTON_AP_SUBNET);
+    WiFi.begin(WIFI_SSID, WIFI_SECRET); // reconnect to the Network
     Serial.println();
     Serial.print("Wait for WiFi");
 
@@ -110,6 +95,22 @@ void Check_WiFi_and_Connect()
     Serial.println("WiFi connected");
     Serial.println("IP address: " + WiFi.localIP().toString());
 
-    Udp.begin(UDPPort);
+    Udp.begin(BUTTON_UDP_LISTEN_PORT);
   }
+}
+
+void setup()
+{
+  // Setting The Serial Port ----------------------------------------------
+  Serial.begin(115200);
+
+  // WiFi Connect ----------------------------------------------------
+  Check_WiFi_and_Connect();
+}
+
+//====================================================================================
+
+void loop()
+{
+  Send_Data_To_Server();
 }

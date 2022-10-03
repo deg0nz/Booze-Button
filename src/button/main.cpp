@@ -10,27 +10,21 @@
 #define LED0 2 // WIFI Module LED
 
 //------------------------------------------------------------------------------------
-#define MAXSC 6 // MAXIMUM NUMBER OF CLIENTS
-
-// AP IP variables are configured in shared.h
 WiFiUDP Udp;
 
 //------------------------------------------------------------------------------------
 // Some Variables
 char packetBuffer[255]; // buffer to hold incoming packet
 char result[10];
+int buttonState = 0;
 
-void setup()
+void HandleButton()
 {
-  Serial.begin(115200);
-
-  // Setting Up A Wifi Access Point
-  WifiSetup();
-}
-
-void loop()
-{
-  HandleClients();
+  buttonState = digitalRead(BUTTON_PIN);
+  if (buttonState == HIGH) {
+    // Send UDP packet
+    Serial.print("Button pressed.");
+  }
 }
 
 void HandleClients()
@@ -76,9 +70,9 @@ void WifiSetup()
   Serial.println("WiFi Mode : AccessPoint Station");
 
   // Starting the AccessPoint
-  WiFi.softAPConfig(APlocal_IP, APgateway, APsubnet); // softAPConfig (local_ip, gateway, subnet)
-  WiFi.softAP(WIFI_SSID, WIFI_SECRET, 1, 0, MAXSC);   // WiFi.softAP(ssid, password, channel, hidden, max_connection)
-  Serial.println("WIFI < " + String(ssid) + " > ... Started");
+  WiFi.softAPConfig(BUTTON_IP, BUTTON_AP_GATEWAY_IP, BUTTON_AP_SUBNET); // softAPConfig (local_ip, gateway, subnet)
+  WiFi.softAP(WIFI_SSID, WIFI_SECRET);   // WiFi.softAP(ssid, password, channel, hidden, max_connection)
+  Serial.println("WIFI < " + String(WIFI_SSID) + " > ... Started");
 
   // Wait a bit
   delay(50);
@@ -94,4 +88,21 @@ void WifiSetup()
   Udp.begin(BUTTON_UDP_LISTEN_PORT);
 
   Serial.println("Server Started");
+}
+
+void setup()
+{
+  Serial.begin(115200);
+
+  // Init button
+  pinMode(BUTTON_PIN, INPUT);
+
+  // Setting Up A Wifi Access Point
+  WifiSetup();
+}
+
+void loop()
+{
+  // HandleButton();
+  HandleClients();
 }
