@@ -17,19 +17,11 @@ WiFiUDP Udp;
 char packetBuffer[255]; // buffer to hold incoming packet
 char result[10];
 int buttonState = 0;
+const String light = "Light!";
 
-void HandleButton()
+void handleUdpPacket()
 {
-  buttonState = digitalRead(BUTTON_PIN);
-  if (buttonState == HIGH) {
-    // Send UDP packet
-    Serial.print("Button pressed.");
-  }
-}
-
-void HandleClients()
-{
-  unsigned long tNow;
+  // unsigned long tNow;
 
   int packetSize = Udp.parsePacket();
   if (packetSize)
@@ -51,12 +43,32 @@ void HandleClients()
     Serial.println("Contents:");
     Serial.println(packetBuffer);
 
-    tNow = millis();
-    dtostrf(tNow, 8, 0, result);
+    // tNow = millis();
+    // dtostrf(tNow, 8, 0, result);
 
-    Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-    Udp.write(result);
-    Udp.endPacket();
+    // Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+    // Udp.write(result);
+    // Udp.endPacket();
+  }
+}
+
+void sendLightPacket()
+{
+  Serial.println("Sending light packet.");
+  Udp.beginPacket(LIGHT_IP, UDP_LISTEN_PORT); // the IP Adress must be known
+  // Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());         // this can be used, to answer to a peer, if data was received first
+  Udp.write(light.c_str());
+  Udp.endPacket(); //
+}
+
+void handleButton()
+{
+  buttonState = digitalRead(BUTTON_PIN);
+  if (buttonState == LOW) {
+    // Send UDP packet
+    Serial.println("Button pressed.");
+    sendLightPacket();
+    delay(200);
   }
 }
 
@@ -85,7 +97,7 @@ void WifiSetup()
   Serial.println(IP);
 
   // Starting UDP Server
-  Udp.begin(BUTTON_UDP_LISTEN_PORT);
+  Udp.begin(UDP_LISTEN_PORT);
 
   Serial.println("Server Started");
 }
@@ -103,6 +115,6 @@ void setup()
 
 void loop()
 {
-  // HandleButton();
-  HandleClients();
+  handleButton();
+  handleUdpPacket();
 }
