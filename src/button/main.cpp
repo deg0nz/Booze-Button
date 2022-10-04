@@ -22,29 +22,28 @@ RotaryEncoder encoder(PIN_IN1, PIN_IN2, RotaryEncoder::LatchMode::TWO03);
 // Some Variables
 char packetBufferIn[255]; // buffer to hold incoming packet
 char packetBufferOut[255];
-unsigned int currentColor;
 char result[10];
 int buttonState = 0;
 unsigned long clientAliveTracker = 0;
 
-int colorIndex = 0;
 unsigned int colors[] = { CRGB::GreenYellow, CRGB::OrangeRed, CRGB::Red };
-int colorsSize = sizeof(colors) / sizeof(CRGB);
-bool colorChangeActive = false;
-unsigned int colorChangeActivityTracker = 0;
+int colorsLength = sizeof(colors) / sizeof(unsigned int);
+int colorsIndex = 0;
+bool showCurrentColorActive = false;
+unsigned int showCurrentColorActivityTracker = 0;
 
 //====================================================================================
 
 void handleSignals(long sig)
 {
-  if (colorChangeActive) 
-  {
-    return;
-  }
-
   switch (sig)
   {
   case SIG_ALIVE:
+    if (showCurrentColorActive) 
+    {
+      return;
+    }
+
     Serial.println("Got alive signal.");
     clientAliveTracker = millis();
     leds[0] = CRGB::Green;
@@ -54,6 +53,7 @@ void handleSignals(long sig)
     break;
   }
 
+  // Check for light aliveness ping timeout
   if ((millis() - clientAliveTracker) > ALIVE_PING_INTERVAL_MS * 2)
   {
     leds[0] = CRGB::Black;
@@ -62,18 +62,28 @@ void handleSignals(long sig)
   FastLED.show();
 }
 
+void chores()
+{
+  // Check for color change mode timeout
+  if ((millis() - showCurrentColorActivityTracker) > 3000)
+  {
+    showCurrentColorActive = false;
+    showCurrentColorActivityTracker = 0;
+  }
+}
+
 void handleUdpPacket()
 {
   int packetSize = Udp.parsePacket();
   if (packetSize)
   {
-    Serial.print("Received packet of size ");
-    Serial.println(packetSize);
+    // Serial.print("Received packet of size ");
+    // Serial.println(packetSize);
 
-    Serial.print("From ");
-    Serial.print(Udp.remoteIP());
-    Serial.print(", port ");
-    Serial.println(Udp.remotePort());
+    // Serial.print("From ");
+    // Serial.print(Udp.remoteIP());
+    // Serial.print(", port ");
+    // Serial.println(Udp.remotePort());
 
     // read the packet into packetBuffer
     int len = Udp.read(packetBufferIn, 255);
@@ -92,15 +102,16 @@ void handleUdpPacket()
 
 void sendLightPacket()
 {
-  Serial.print("Sending light packet - ");
   Udp.beginPacket(LIGHT_IP, UDP_LISTEN_PORT);
-  itoa(colors[colorIndex], packetBufferOut, 10);
-  Serial.print("Current color: ");
-  Serial.print(colors[colorIndex]);
-  Serial.print(" | Out: ");
-  Serial.println(packetBufferOut);
+  itoa(colors[colorsIndex], packetBufferOut, 10);
   Udp.write(packetBufferOut);
   Udp.endPacket();
+
+  Serial.print("Sending light packet - ");
+  Serial.print("Current color: ");
+  Serial.print(colors[colorsIndex]);
+  Serial.print(" | Out: ");
+  Serial.println(packetBufferOut);
 }
 
 void handleLightButton()
@@ -113,6 +124,15 @@ void handleLightButton()
   }
 }
 
+void showCurrentColor()
+{
+  leds[0] = colors[colorsIndex];
+  FastLED.show();
+
+  showCurrentColorActive = true;
+  showCurrentColorActivityTracker = millis();
+}
+
 void handleRotaryEncoder()
 {
   static int pos = 0;
@@ -120,35 +140,36 @@ void handleRotaryEncoder()
 
   int directionValue = (int)(encoder.getDirection());
 
+  // We only want to react when the encoder is rotated
   if (directionValue != 0) {
-    int nextIndex = colorIndex + directionValue;
+    int nextIndex = colorsIndex + directionValue;
 
+    // Limit index boundaries to colors array size
     if (nextIndex < 0)
     {
-      colorIndex = colorsSize - 1;
+      colorsIndex = colorsLength - 1;
     } 
-    else if (nextIndex > colorsSize - 1)
+    else if (nextIndex >= colorsLength - 1)
     {
-      colorIndex = 0;
+      colorsIndex = 0;
     }
     else
     {
-      colorIndex += directionValue;
+      colorsIndex = nextIndex;
     }
 
+    Serial.print("New colorsIndex: ");
+    Serial.println(colorsIndex);
 
-// TODO: eigene Funktion
-    leds[0] = colors[colorIndex];
-    FastLED.show();
-
-    colorChangeActive = true;
-    colorChangeActivityTracker = millis();
+    showCurrentColor();
   }
 
-  if ((millis() - colorChangeActivityTracker) > 3000)
-  {
-    colorChangeActive = false;
-    colorChangeActivityTracker = 0;
+  // Handle pressed rotary encoder
+  buttonState = digitalRead(BUTTON_ROTARY_BUTTON_PIN);
+  if (buttonState == LOW) {
+    Serial.println("Rotary button pressed.");
+    showCurrentColor();
+    delay(BUTTON_DELAY);
   }
 }
 
@@ -179,6 +200,7 @@ void WifiSetup()
 
 void setup()
 {
+  // Init serial
   Serial.begin(115200);
 
   // Init LEDs
@@ -187,15 +209,18 @@ void setup()
   FastLED.setBrightness(10);
   FastLED.show();
 
-  // Init button
-  pinMode(BUTTON_PIN, INPUT);
+  // Init main button (the one that activates the light)
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  // Init rotary button (shows currently selected color)
+  pinMode(BUTTON_ROTARY_BUTTON_PIN, INPUT_PULLUP);
+
+  // Setting Up A Wifi Access Point
+  WifiSetup();
 
   // Starting UDP Server
   Udp.begin(UDP_LISTEN_PORT);
   Serial.println("UDP Server Started");
-
-  // Setting Up A Wifi Access Point
-  WifiSetup();
 }
 
 void loop()
@@ -203,4 +228,5 @@ void loop()
   handleLightButton();
   handleUdpPacket();
   handleRotaryEncoder();
+  chores();
 }
