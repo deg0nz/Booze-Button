@@ -9,7 +9,6 @@
 
 // Signals
 #define SIG_ALIVE 1
-#define SIG_LIGHTS_ON 2
 
 // Button settings
 IPAddress BUTTON_IP(192, 168, 2, 1);
