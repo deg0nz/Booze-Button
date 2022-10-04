@@ -26,7 +26,7 @@ char result[10];
 int buttonState = 0;
 unsigned long clientAliveTracker = 0;
 
-unsigned int colors[] = { CRGB::LawnGreen, CRGB::Yellow, CRGB::Red };
+unsigned int colors[] = { CRGB::Green, CRGB::Yellow, CRGB::Red };
 int colorsLength = sizeof(colors) / sizeof(unsigned int);
 int colorsIndex = 0;
 bool showCurrentColorActive = false;
@@ -46,7 +46,7 @@ void handleSignals(long sig)
 
     Serial.println("Got alive signal.");
     clientAliveTracker = millis();
-    leds[0] = CRGB::Green;
+    leds[0] = CRGB::Violet;
     break;
 
   default:
@@ -206,7 +206,7 @@ void setup()
   // Init LEDs
   FastLED.addLeds<NEOPIXEL, BUTTON_STATUS_LED_PIN>(leds, 1);
   leds[0] = CRGB::Black;
-  FastLED.setBrightness(10);
+  FastLED.setBrightness(20);
   FastLED.show();
 
   // Init main button (the one that activates the light)
