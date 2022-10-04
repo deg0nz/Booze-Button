@@ -26,7 +26,7 @@ char result[10];
 int buttonState = 0;
 unsigned long clientAliveTracker = 0;
 
-unsigned int colors[] = { CRGB::GreenYellow, CRGB::OrangeRed, CRGB::Red };
+unsigned int colors[] = { CRGB::LawnGreen, CRGB::Yellow, CRGB::Red };
 int colorsLength = sizeof(colors) / sizeof(unsigned int);
 int colorsIndex = 0;
 bool showCurrentColorActive = false;
@@ -149,7 +149,7 @@ void handleRotaryEncoder()
     {
       colorsIndex = colorsLength - 1;
     } 
-    else if (nextIndex >= colorsLength - 1)
+    else if (nextIndex > colorsLength - 1)
     {
       colorsIndex = 0;
     }
