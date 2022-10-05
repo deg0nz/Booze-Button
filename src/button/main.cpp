@@ -31,6 +31,7 @@ int colorsLength = sizeof(colors) / sizeof(unsigned int);
 int colorsIndex = 0;
 bool showCurrentColorActive = false;
 unsigned int showCurrentColorActivityTracker = 0;
+unsigned int showCurrentColorActiveTime = 1000;
 
 //====================================================================================
 
@@ -47,28 +48,28 @@ void handleSignals(long sig)
     Serial.println("Got alive signal.");
     clientAliveTracker = millis();
     leds[0] = CRGB::Violet;
+    FastLED.show();
     break;
 
   default:
     break;
+  }
+}
+
+void chores()
+{
+  // Check for color change mode timeout
+  if ((millis() - showCurrentColorActivityTracker) > showCurrentColorActiveTime)
+  {
+    showCurrentColorActive = false;
+    showCurrentColorActivityTracker = 0;
   }
 
   // Check for light aliveness ping timeout
   if ((millis() - clientAliveTracker) > ALIVE_PING_INTERVAL_MS * 2)
   {
     leds[0] = CRGB::Black;
-  }
-
-  FastLED.show();
-}
-
-void chores()
-{
-  // Check for color change mode timeout
-  if ((millis() - showCurrentColorActivityTracker) > 3000)
-  {
-    showCurrentColorActive = false;
-    showCurrentColorActivityTracker = 0;
+    FastLED.show();
   }
 }
 
@@ -100,6 +101,16 @@ void handleUdpPacket()
   }
 }
 
+void showCurrentColor(unsigned int ms)
+{
+  leds[0] = colors[colorsIndex];
+  FastLED.show();
+
+  showCurrentColorActive = true;
+  showCurrentColorActivityTracker = millis();
+  showCurrentColorActiveTime = ms;
+}
+
 void sendLightPacket()
 {
   Udp.beginPacket(LIGHT_IP, UDP_LISTEN_PORT);
@@ -120,17 +131,9 @@ void handleLightButton()
   if (buttonState == LOW) {
     Serial.println("Light button pressed.");
     sendLightPacket();
+    showCurrentColor(BUTTON_DELAY);
     delay(BUTTON_DELAY);
   }
-}
-
-void showCurrentColor()
-{
-  leds[0] = colors[colorsIndex];
-  FastLED.show();
-
-  showCurrentColorActive = true;
-  showCurrentColorActivityTracker = millis();
 }
 
 void handleRotaryEncoder()
@@ -161,14 +164,14 @@ void handleRotaryEncoder()
     Serial.print("New colorsIndex: ");
     Serial.println(colorsIndex);
 
-    showCurrentColor();
+    showCurrentColor(1000);
   }
 
   // Handle pressed rotary encoder
   buttonState = digitalRead(BUTTON_ROTARY_BUTTON_PIN);
   if (buttonState == LOW) {
     Serial.println("Rotary button pressed.");
-    showCurrentColor();
+    showCurrentColor(1000);
     delay(BUTTON_DELAY);
   }
 }
