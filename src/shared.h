@@ -5,7 +5,7 @@
 #define WIFI_SECRET "need-drinks-faster"
 #define ALIVE_PING_INTERVAL_MS 1000
 #define UDP_LISTEN_PORT 2342
-#define BUTTON_DELAY 100
+#define BUTTON_DELAY 10
 
 // Signals
 #define SIG_ALIVE 1
@@ -20,5 +20,5 @@ IPAddress BUTTON_AP_SUBNET(255, 255, 255, 0);
 
 // Client/Light settings
 #define LIGHT_LED_PIN D4
-#define LIGHT_NUM_LEDS 1
+#define LIGHT_NUM_LEDS 11
 IPAddress LIGHT_IP(192, 168, 2, 2);

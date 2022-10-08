@@ -10,13 +10,13 @@
 //------------------------------------------------------------------------------------
 // Define I/O Pins
 #define LED0 2 // WIFI Module LED
-#define PIN_IN1 D5
-#define PIN_IN2 D6
+#define ROTARY_PIN1 D6
+#define ROTARY_PIN2 D5
 
 //------------------------------------------------------------------------------------
 WiFiUDP Udp;
 CRGB leds[1];
-RotaryEncoder encoder(PIN_IN1, PIN_IN2, RotaryEncoder::LatchMode::TWO03);
+RotaryEncoder encoder(ROTARY_PIN1, ROTARY_PIN2, RotaryEncoder::LatchMode::TWO03);
 
 //------------------------------------------------------------------------------------
 // Some Variables
@@ -37,22 +37,15 @@ unsigned int showCurrentColorActiveTime = 1000;
 
 void handleSignals(long sig)
 {
-  switch (sig)
-  {
-  case SIG_ALIVE:
-    if (showCurrentColorActive) 
-    {
-      return;
-    }
-
+  if (sig == SIG_ALIVE) {
     Serial.println("Got alive signal.");
     clientAliveTracker = millis();
-    leds[0] = CRGB::Violet;
-    FastLED.show();
-    break;
 
-  default:
-    break;
+    if (!showCurrentColorActive) 
+    {
+      leds[0] = CRGB::Violet;
+      FastLED.show();
+    }
   }
 }
 
@@ -164,7 +157,10 @@ void handleRotaryEncoder()
     Serial.print("New colorsIndex: ");
     Serial.println(colorsIndex);
 
-    showCurrentColor(1000);
+    showCurrentColor(1500);
+
+    // Prevents double-executions
+    delay(30);
   }
 
   // Handle pressed rotary encoder
@@ -172,7 +168,7 @@ void handleRotaryEncoder()
   if (buttonState == LOW) {
     Serial.println("Rotary button pressed.");
     showCurrentColor(1000);
-    delay(BUTTON_DELAY);
+    delay(50);
   }
 }
 
