@@ -27,8 +27,12 @@ unsigned int showCurrentBrightnessActivityTracker = 0;
 
 void sendAlivePing()
 {
+
   if ((millis() - sendPingTimeCounter) > ALIVE_PING_INTERVAL_MS)
   {
+    Serial.print("Signal strength: ");
+    Serial.println(WiFi.RSSI());
+
     Serial.println("Sending alive Ping");
     Udp.beginPacket(BUTTON_AP_GATEWAY_IP, UDP_LISTEN_PORT); // the IP Adress must be known
     // Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());         // this can be used, to answer to a peer, if data was received first
@@ -47,6 +51,29 @@ void setColor(CRGB color)
   }
 }
 
+void pulsate(CRGB color)
+{
+  setColor(color);
+
+  for (unsigned int i = 1; i < 255; i++)
+  {
+    FastLED.setBrightness(i);
+    FastLED.show();
+    delay(5);
+  }
+  
+  for (unsigned int i = 255; i > 1; i--)
+  {
+    FastLED.setBrightness(i);
+    FastLED.show();
+    delay(5);
+  }
+
+  setColor(CRGB::Black);
+  FastLED.show();
+}
+
+void flashLED(CRGB color, unsigned int timeMs)
 {
   Serial.print("Color: ");
   Serial.println(color);
@@ -135,7 +162,10 @@ void checkWifiAndConnect()
     {
       delay(500);
       Serial.print(".");
+      pulsate(CRGB::DarkViolet);
+      FastLED.setBrightness(255);
     }
+
     Serial.println("");
     Serial.println("WiFi connected");
     Serial.println("IP address: " + WiFi.localIP().toString());
