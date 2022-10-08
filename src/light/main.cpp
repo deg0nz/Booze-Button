@@ -2,27 +2,26 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUDP.h>
 #include <FastLED.h>
+#include <RotaryEncoder.h>
 
 //-- Local includes ------------------------------------------------------------------
 #include "../shared.h"
+#define ROTARY_PIN1 D6
+#define ROTARY_PIN2 D7
 
 //------------------------------------------------------------------------------------
-// Define I/O Pins
-#define LED0 2 // WIFI Module LED
-
-//------------------------------------------------------------------------------------
-// Authentication Variables
-const String Devicename = "Light_1";
-
 WiFiUDP Udp;
 CRGB leds[LIGHT_NUM_LEDS];
+RotaryEncoder encoder(ROTARY_PIN1, ROTARY_PIN2, RotaryEncoder::LatchMode::TWO03);
 
 //------------------------------------------------------------------------------------
 // Some Variables
 char packetBufferIn[255]; // buffer for incoming data
 char packetBufferOut[255];
 unsigned long sendPingTimeCounter = 0;
-unsigned int currentColor;
+unsigned int currentColor = CRGB::Green;
+unsigned int currentBrightness = 255;
+unsigned int showCurrentBrightnessActivityTracker = 0;
 
 //====================================================================================
 
@@ -40,16 +39,23 @@ void sendAlivePing()
   }
 }
 
-void flashLED(CRGB color)
+void setColor(CRGB color)
+{
+  for (uint i = 0; i < LIGHT_NUM_LEDS - 1; i++)
+  {
+    leds[i] = color;
+  }
+}
+
 {
   Serial.print("Color: ");
   Serial.println(color);
   // Turn the LED on, then pause
-  leds[0] = color;
+  setColor(color);
   FastLED.show();
-  delay(BUTTON_DELAY);
+  delay(timeMs);
   // Now turn the LED off, then pause
-  leds[0] = CRGB::Black;
+  setColor(CRGB::Black);
   FastLED.show();
 }
 
@@ -76,7 +82,42 @@ void handleUdpPacket()
     Serial.println(packetBufferIn);
 
     sscanf(packetBufferIn, "%d", &currentColor);
-    flashLED(currentColor);
+    flashLED(currentColor, BUTTON_DELAY);
+  }
+}
+
+void handleRotaryEncoder()
+{
+  static int pos = 0;
+  encoder.tick();
+
+  int directionValue = (int)(encoder.getDirection());
+  // We only want to react when the encoder is rotated
+  if (directionValue != 0) {
+    int nextBrightness = currentBrightness + directionValue;
+
+    if (nextBrightness < 1 || nextBrightness > 255)
+    {
+      return;
+    } 
+
+    currentBrightness = nextBrightness;
+
+    Serial.print("Current Brightness: ");
+    Serial.println(currentBrightness);
+
+    FastLED.setBrightness(currentBrightness);
+    setColor(currentColor);
+    FastLED.show();
+    showCurrentBrightnessActivityTracker = millis();
+  }
+
+  // Check for color change mode timeout
+  if ((millis() - showCurrentBrightnessActivityTracker) > 1000)
+  {
+    showCurrentBrightnessActivityTracker = 0;
+    setColor(CRGB::Black);
+    FastLED.show();
   }
 }
 
@@ -110,7 +151,8 @@ void setup()
   
   // Init LEDs
   FastLED.addLeds<NEOPIXEL, LIGHT_LED_PIN>(leds, LIGHT_NUM_LEDS);
-  leds[0] = CRGB::Black;
+  setColor(CRGB::Black);
+  FastLED.setBrightness(currentBrightness);
   FastLED.show();
 
   // Start Serial
@@ -128,4 +170,5 @@ void loop()
   checkWifiAndConnect();
   sendAlivePing();
   handleUdpPacket();
+  handleRotaryEncoder();
 }
